@@ -1,6 +1,6 @@
 <p align="center">
   <img src="assets/opencode-logo-light.svg" alt="OpenCode" height="96" />
-  <span>&nbsp;&nbsp;&nbsp;<strong>+</strong>&nbsp;&nbsp;&nbsp;</span>
+  &nbsp;&nbsp;&nbsp;
   <img src="https://troco.dev/mark-coin.svg" alt="Troco" height="96" />
 </p>
 
@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/Gabrielribeiroic/opencode-troco"><img src="https://img.shields.io/badge/OpenCode-plugin-111111?style=flat-square" alt="OpenCode plugin"></a>
-  <a href="https://troco.dev"><img src="https://img.shields.io/badge/Troco-supported-2FB266?style=flat-square" alt="Troco"></a>
+  <a href="https://troco.dev"><img src="https://img.shields.io/badge/Troco-unofficial-2FB266?style=flat-square" alt="Unofficial Troco integration"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square" alt="GPL-3.0"></a>
   <a href="#install"><img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-a78bfa?style=flat-square" alt="Platform"></a>
 </p>
