@@ -1,0 +1,8 @@
+{
+  "apiUrl": "https://troco.dev/api",
+  "dryRun": true,
+  "useServe": false,
+  "realCredit": false,
+  "minVisibleMs": 15000,
+  "placement": "both"
+}
