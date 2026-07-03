@@ -25,11 +25,48 @@ const [configDir, packageName, packageSpec] = process.argv.slice(2)
 function readJson(path, fallback) {
   if (!existsSync(path)) return fallback
   try {
-    return JSON.parse(readFileSync(path, 'utf8'))
+    return JSON.parse(stripJsonComments(readFileSync(path, 'utf8')))
   } catch (error) {
     console.error(`${path} is not valid JSON: ${error.message}`)
     process.exit(1)
   }
+}
+
+function stripJsonComments(input) {
+  let output = ''
+  let inString = false
+  let quote = ''
+  let escaped = false
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i]
+    const next = input[i + 1]
+    if (inString) {
+      output += char
+      if (escaped) escaped = false
+      else if (char === '\\') escaped = true
+      else if (char === quote) inString = false
+      continue
+    }
+    if (char === '"' || char === "'") {
+      inString = true
+      quote = char
+      output += char
+      continue
+    }
+    if (char === '/' && next === '/') {
+      while (i < input.length && input[i] !== '\n') i++
+      output += '\n'
+      continue
+    }
+    if (char === '/' && next === '*') {
+      i += 2
+      while (i < input.length && !(input[i] === '*' && input[i + 1] === '/')) i++
+      i++
+      continue
+    }
+    output += char
+  }
+  return output
 }
 
 function writeJson(path, value) {
@@ -50,7 +87,7 @@ const packageJson = readJson(packageJsonPath, {})
 packageJson.dependencies = { ...(packageJson.dependencies || {}), [packageName]: packageSpec }
 writeJson(packageJsonPath, packageJson)
 
-const serverConfigPath = join(configDir, 'opencode.json')
+const serverConfigPath = existsSync(join(configDir, 'opencode.jsonc')) ? join(configDir, 'opencode.jsonc') : join(configDir, 'opencode.json')
 const serverConfig = readJson(serverConfigPath, { $schema: 'https://opencode.ai/config.json' })
 serverConfig.$schema ||= 'https://opencode.ai/config.json'
 serverConfig.plugin = addUniquePlugin(serverConfig.plugin, packageName)
@@ -59,7 +96,7 @@ writeJson(serverConfigPath, serverConfig)
 const tuiConfigPath = join(configDir, 'tui.json')
 const tuiConfig = readJson(tuiConfigPath, { $schema: 'https://opencode.ai/tui.json' })
 tuiConfig.$schema ||= 'https://opencode.ai/tui.json'
-tuiConfig.plugin = addUniquePlugin(tuiConfig.plugin, join(configDir, 'node_modules', packageName, 'tui.tsx'))
+tuiConfig.plugin = addUniquePlugin(tuiConfig.plugin, packageName)
 writeJson(tuiConfigPath, tuiConfig)
 
 const trocoConfigPath = join(configDir, 'opencode-troco.json')

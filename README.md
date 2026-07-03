@@ -61,8 +61,8 @@ The script updates files under `~/.config/opencode`:
 | File | Change |
 |---|---|
 | `package.json` | Adds `opencode-troco` as a GitHub dependency |
-| `opencode.json` | Adds the server plugin without removing existing plugins |
-| `tui.json` | Adds the TUI plugin path without removing existing plugins |
+| `opencode.jsonc` or `opencode.json` | Adds the server plugin without removing existing plugins |
+| `tui.json` | Adds the TUI plugin without removing existing plugins |
 | `opencode-troco.json` | Creates safe dry-run defaults if missing |
 
 Restart OpenCode after installation. OpenCode loads config and plugins at startup.
@@ -85,7 +85,7 @@ Install it:
 npm install --prefix ~/.config/opencode
 ```
 
-Add the server plugin to `~/.config/opencode/opencode.json`:
+Add the server plugin to your active OpenCode config. If `~/.config/opencode/opencode.jsonc` exists, update that file; otherwise update `~/.config/opencode/opencode.json`:
 
 ```jsonc
 {
@@ -99,7 +99,7 @@ Add the TUI plugin to `~/.config/opencode/tui.json`:
 ```jsonc
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["/home/YOU/.config/opencode/node_modules/opencode-troco/tui.tsx"]
+  "plugin": ["opencode-troco"]
 }
 ```
 
@@ -181,8 +181,8 @@ curl -fsSL https://raw.githubusercontent.com/Gabrielribeiroic/opencode-troco/mai
 
 3. If installing manually, parse and merge JSON. Never replace the whole file unless it does not exist.
 4. In `~/.config/opencode/package.json`, add or update only `dependencies["opencode-troco"]`.
-5. In `~/.config/opencode/opencode.json`, append only `"opencode-troco"` to `plugin` if missing.
-6. In `~/.config/opencode/tui.json`, append only `~/.config/opencode/node_modules/opencode-troco/tui.tsx` if missing.
+5. If `~/.config/opencode/opencode.jsonc` exists, append only `"opencode-troco"` to that file's `plugin` array; otherwise use `~/.config/opencode/opencode.json`.
+6. In `~/.config/opencode/tui.json`, append only `"opencode-troco"` if missing.
 7. Create `~/.config/opencode/opencode-troco.json` only if it does not exist, and use dry-run defaults.
 8. Run `npm install --prefix ~/.config/opencode`.
 9. Tell the user to restart OpenCode.
