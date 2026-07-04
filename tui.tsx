@@ -1,5 +1,5 @@
 /** @jsxImportSource @opentui/solid */
-import { createElement, type JSX } from "@opentui/solid";
+import type { JSX } from "@opentui/solid";
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule, TuiPromptRef } from "@opencode-ai/plugin/tui";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";

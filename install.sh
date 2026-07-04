@@ -96,7 +96,7 @@ writeJson(serverConfigPath, serverConfig)
 const tuiConfigPath = join(configDir, 'tui.json')
 const tuiConfig = readJson(tuiConfigPath, { $schema: 'https://opencode.ai/tui.json' })
 tuiConfig.$schema ||= 'https://opencode.ai/tui.json'
-tuiConfig.plugin = addUniquePlugin(tuiConfig.plugin, join(configDir, 'node_modules', packageName, 'tui.js'))
+tuiConfig.plugin = addUniquePlugin(tuiConfig.plugin, packageName)
 writeJson(tuiConfigPath, tuiConfig)
 
 const trocoConfigPath = join(configDir, 'opencode-troco.json')

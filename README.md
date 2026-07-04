@@ -62,7 +62,7 @@ The script updates files under `~/.config/opencode`:
 |---|---|
 | `package.json` | Adds `opencode-troco` as a GitHub dependency |
 | `opencode.jsonc` or `opencode.json` | Adds the server plugin without removing existing plugins |
-| `tui.json` | Adds the packaged TUI plugin file without removing existing plugins |
+| `tui.json` | Adds the TUI plugin without removing existing plugins |
 | `opencode-troco.json` | Creates safe dry-run defaults if missing |
 
 Restart OpenCode after installation. OpenCode loads config and plugins at startup.
@@ -99,7 +99,7 @@ Add the TUI plugin to `~/.config/opencode/tui.json`:
 ```jsonc
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["/home/YOU/.config/opencode/node_modules/opencode-troco/tui.js"]
+  "plugin": ["opencode-troco"]
 }
 ```
 
@@ -182,7 +182,7 @@ curl -fsSL https://raw.githubusercontent.com/Gabrielribeiroic/opencode-troco/mai
 3. If installing manually, parse and merge JSON. Never replace the whole file unless it does not exist.
 4. In `~/.config/opencode/package.json`, add or update only `dependencies["opencode-troco"]`.
 5. If `~/.config/opencode/opencode.jsonc` exists, append only `"opencode-troco"` to that file's `plugin` array; otherwise use `~/.config/opencode/opencode.json`.
-6. In `~/.config/opencode/tui.json`, append only `~/.config/opencode/node_modules/opencode-troco/tui.js` if missing.
+6. In `~/.config/opencode/tui.json`, append only `"opencode-troco"` if missing.
 7. Create `~/.config/opencode/opencode-troco.json` only if it does not exist, and use dry-run defaults.
 8. Run `npm install --prefix ~/.config/opencode`.
 9. Tell the user to restart OpenCode.
@@ -213,8 +213,7 @@ Project files:
 | File | Purpose |
 |---|---|
 | `index.js` | Server plugin and `troco_status` tool |
-| `tui.tsx` | Source for OpenCode TUI slots |
-| `tui.js` | Packaged TUI plugin loaded by OpenCode |
+| `tui.tsx` | OpenCode TUI slots for sidebar/status display |
 | `install.sh` | Non-destructive OpenCode installer |
 | `opencode-troco.example.json` | Safe config example |
 
