@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/opencode-logo-light.svg" alt="OpenCode" height="96" />
+  <img src="assets/opencode-logo-dark-square.svg" alt="OpenCode" height="96" />
   &nbsp;&nbsp;&nbsp;
   <img src="https://troco.dev/mark-coin.svg" alt="Troco" height="96" />
 </p>
