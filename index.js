@@ -23,6 +23,10 @@ function loadToken() {
   }
 }
 
+function loadDiagnostics() {
+  return readJson(join(homedir(), ".troco", "opencode-diagnostics.json"));
+}
+
 function loadConfig(options = {}) {
   const fileConfig = readJson(join(homedir(), ".config", "opencode", "opencode-troco.json"));
   return {
@@ -75,6 +79,7 @@ const server = async (_ctx, options = {}) => {
               balance = "unreachable";
             }
           }
+          const diagnostics = loadDiagnostics();
           return [
             "OpenCode Troco",
             `api: ${config.apiUrl}`,
@@ -85,7 +90,10 @@ const server = async (_ctx, options = {}) => {
             `useServe: ${Boolean(config.useServe)}`,
             `realCredit: ${Boolean(config.realCredit)}`,
             `placement: ${config.placement}`,
-          ].join("\n");
+            diagnostics.serveStatus ? `serve: http ${diagnostics.serveStatus} ${diagnostics.serveAdName || "unknown"} nonce:${diagnostics.serveHasNonce ? "yes" : "no"} fm:${diagnostics.serveFm ?? "n/a"}` : null,
+            diagnostics.eventStatus ? `event: http ${diagnostics.eventStatus} credited:${diagnostics.eventCredited ? "yes" : "no"} ${diagnostics.eventAdName || "unknown"}` : null,
+            diagnostics.eventError ? `event error: ${diagnostics.eventError} ${diagnostics.eventAdName || "unknown"}` : null,
+          ].filter(Boolean).join("\n");
         },
       }),
     },

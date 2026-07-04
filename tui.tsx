@@ -10,6 +10,8 @@ const ID = "opencode-troco";
 const SIDEBAR_ORDER = 140;
 const STATUS_ORDER = 80;
 const REFRESH_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 1500;
+const EVENT_TIMEOUT_MS = 5000;
 
 type Balance = {
   hoje?: number;
@@ -28,6 +30,7 @@ type Ad = {
 type ServedAd = {
   ad: Ad;
   nonce?: string;
+  source: "serve" | "ads";
 };
 
 type Config = {
@@ -48,8 +51,28 @@ type State = {
   message?: string;
 };
 
+type CreditEntry = {
+  key: string;
+  mode: string;
+  ts: number;
+};
+
 function trocoDir() {
   return join(homedir(), ".troco");
+}
+
+function writeDiagnostics(data: Record<string, unknown>) {
+  try {
+    mkdirSync(trocoDir(), { recursive: true });
+    const path = join(trocoDir(), "opencode-diagnostics.json");
+    let current = {};
+    try {
+      current = JSON.parse(readFileSync(path, "utf8"));
+    } catch {
+    }
+    writeFileSync(path, JSON.stringify({ ...current, ...data, ts: Date.now() }), "utf8");
+  } catch {
+  }
 }
 
 function readJson(path: string): Record<string, unknown> {
@@ -104,20 +127,35 @@ function balanceLabel(balance?: Balance): string {
 async function getAd(config: Config, token: string | null): Promise<ServedAd | null> {
   const headers: Record<string, string> = token ? { authorization: `Bearer ${token}` } : {};
   if (config.useServe && token) {
-    const response = await fetch(`${config.apiUrl}/serve`, { headers, signal: AbortSignal.timeout(1500) });
-    if (response.ok) return await response.json();
+    const response = await fetch(`${config.apiUrl}/serve`, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    const body = response.ok ? await response.json().catch(() => null) : null;
+    writeDiagnostics({
+      serveStatus: response.status,
+      serveOk: response.ok,
+      serveAdId: body?.ad?.id,
+      serveAdName: body?.ad?.nome,
+      serveHasNonce: Boolean(body?.nonce),
+      serveFm: body?.fm ?? null,
+      eventStatus: null,
+      eventOk: null,
+      eventCredited: null,
+      eventAdId: null,
+      eventAdName: null,
+      eventError: null,
+    });
+    if (body?.ad) return { ...body, source: "serve" };
   }
 
-  const response = await fetch(`${config.apiUrl}/ads`, { signal: AbortSignal.timeout(1500) });
+  const response = await fetch(`${config.apiUrl}/ads`, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   if (!response.ok) return null;
   const ads = ((await response.json()).ads || []) as Ad[];
   if (!ads.length) return null;
-  return { ad: ads[Math.floor(Date.now() / REFRESH_MS) % ads.length] };
+  return { ad: ads[Math.floor(Date.now() / REFRESH_MS) % ads.length], source: "ads" };
 }
 
 async function getBalance(config: Config, token: string | null): Promise<Balance | null> {
   if (!token) return null;
-  const response = await fetch(`${config.apiUrl}/balance`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(1500) });
+  const response = await fetch(`${config.apiUrl}/balance`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   if (!response.ok) return null;
   return await response.json();
 }
@@ -128,7 +166,8 @@ function creditKey(ad?: Ad) {
 
 function alreadyCredited(key: string) {
   try {
-    return readFileSync(join(trocoDir(), "opencode-credit.json"), "utf8").includes(JSON.stringify(key));
+    const entries = JSON.parse(readFileSync(join(trocoDir(), "opencode-credit.json"), "utf8"));
+    return (Array.isArray(entries) ? entries : [entries]).some((entry: CreditEntry) => entry.key === key);
   } catch {
     return false;
   }
@@ -137,31 +176,62 @@ function alreadyCredited(key: string) {
 function markCredited(key: string, mode: string) {
   try {
     mkdirSync(trocoDir(), { recursive: true });
-    writeFileSync(join(trocoDir(), "opencode-credit.json"), JSON.stringify({ key, mode, ts: Date.now() }), "utf8");
+    let entries: CreditEntry[] = [];
+    try {
+      const current = JSON.parse(readFileSync(join(trocoDir(), "opencode-credit.json"), "utf8"));
+      entries = Array.isArray(current) ? current : [current];
+    } catch {
+    }
+    entries = [{ key, mode, ts: Date.now() }, ...entries.filter((entry) => entry.key !== key)].slice(0, 50);
+    writeFileSync(join(trocoDir(), "opencode-credit.json"), JSON.stringify(entries), "utf8");
   } catch {
   }
 }
 
 async function maybeCredit(config: Config, token: string | null, served: ServedAd, balance: Balance | undefined, setState: (state: State) => void) {
   const key = creditKey(served.ad);
-  if (!served.ad.id || alreadyCredited(key)) return;
+  const realEvent = Boolean(!config.dryRun && config.realCredit && config.useServe && token && served.nonce && served.source === "serve");
+  if (!served.ad.id || (!realEvent && alreadyCredited(key))) return;
 
-  if (config.dryRun || !config.realCredit || !config.useServe || !token || !served.nonce) {
+  if (!realEvent && !config.dryRun) {
+    setState({ status: "ready", ad: served.ad, nonce: served.nonce, balance, credited: "skipped" });
+    return;
+  }
+
+  if (config.dryRun || !realEvent) {
     markCredited(key, "dry-run");
     setState({ status: "ready", ad: served.ad, nonce: served.nonce, balance, credited: "dry-run" });
     return;
   }
 
-  const response = await fetch(`${config.apiUrl}/events`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ adId: served.ad.id, tipo: "view_threshold_met", nonce: served.nonce }),
-    signal: AbortSignal.timeout(1500),
-  });
-  const body = response.ok ? await response.json().catch(() => null) : null;
-  if (body?.credited) {
-    markCredited(key, "sent");
-    setState({ status: "ready", ad: served.ad, nonce: served.nonce, balance, credited: "sent" });
+  try {
+    const response = await fetch(`${config.apiUrl}/events`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ adId: served.ad.id, tipo: "view_threshold_met", nonce: served.nonce }),
+      signal: AbortSignal.timeout(EVENT_TIMEOUT_MS),
+    });
+    const body = response.ok ? await response.json().catch(() => null) : null;
+    writeDiagnostics({
+      eventStatus: response.status,
+      eventOk: response.ok,
+      eventCredited: Boolean(body?.credited),
+      eventAdId: served.ad.id,
+      eventAdName: served.ad.nome,
+    });
+    if (body?.credited) {
+      markCredited(key, "sent");
+      setState({ status: "ready", ad: served.ad, nonce: served.nonce, balance, credited: "sent" });
+    } else {
+      setState({ status: "ready", ad: served.ad, nonce: served.nonce, balance, credited: "skipped" });
+    }
+  } catch (error) {
+    writeDiagnostics({
+      eventError: error instanceof Error ? error.name : "unknown",
+      eventAdId: served.ad.id,
+      eventAdName: served.ad.nome,
+    });
+    setState({ status: "ready", ad: served.ad, nonce: served.nonce, balance, credited: "skipped" });
   }
 }
 
@@ -239,7 +309,7 @@ function SidebarView(props: { api: TuiPluginApi }) {
             <text fg={props.api.theme.current.textMuted} wrapMode="none">{balanceLabel(state().balance)}</text>
           </Show>
           <text fg={props.api.theme.current.textMuted} wrapMode="none">
-            {resource.config.dryRun ? "dry-run" : state().credited === "sent" ? "credited" : "visible"}
+            {resource.config.dryRun ? "dry-run" : state().credited === "sent" ? "credited" : state().credited === "skipped" ? "not credited" : "visible"}
           </text>
         </Show>
       </box>
