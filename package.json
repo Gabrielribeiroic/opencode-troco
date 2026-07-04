@@ -7,7 +7,7 @@
   "exports": {
     ".": "./index.js",
     "./server": "./index.js",
-    "./tui": "./tui.tsx"
+    "./tui": "./tui.js"
   },
   "oc-plugin": ["server", "tui"],
   "dependencies": {
