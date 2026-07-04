@@ -213,7 +213,9 @@ Project files:
 | File | Purpose |
 |---|---|
 | `index.js` | Server plugin and `troco_status` tool |
-| `tui.tsx` | OpenCode TUI slots for sidebar/status display |
+| `tui.tsx` | Source for the OpenCode TUI slots (sidebar/status display) |
+| `tui.js` | Built TUI plugin loaded by OpenCode (`npm run build` from `tui.tsx`) |
+| `build.mjs` | Compiles `tui.tsx` to `tui.js` with the Solid compiler |
 | `install.sh` | Non-destructive OpenCode installer |
 | `opencode-troco.example.json` | Safe config example |
 
